@@ -1,61 +1,16 @@
-# VidReward DZ — لوحة تحكم الأدمن
+# React + Vite
 
-## تجربة سريعة (بدون نشر)
-افتحي ملف `index.html` مباشرة بالمتصفح (Chrome) بضغطة نقر مزدوج — تشتغل فوراً بدون أي تثبيت.
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-⚠️ إذا واجهتي مشكلة "CORS" أو الصفحة ما تخدمش صح وأنتِ فاتحاها كملف مباشر، هذا طبيعي بمتصفحات قليلة، والحل النشر (تحت) بدل التجربة المحلية.
+Currently, two official plugins are available:
 
----
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## النشر النهائي على Cloudflare Pages (خطوة بخطوة)
+## React Compiler
 
-### 1. رفع المشروع على GitHub
-1. روحي لـ [github.com/new](https://github.com/new)
-2. اسم المستودع (Repository name): `vidreward-admin`
-3. خليه **Public** أو **Private** (الاثنين يخدمو مع Cloudflare Pages)
-4. اضغطي **Create repository**
-5. بصفحة المستودع الجديدة، دور على زر **"uploading an existing file"**
-6. اسحبي (Drag & Drop) **كل ملفات ومجلدات هذا المشروع** (بما فيها مجلد `assets` كامل)
-7. اكتبي أي رسالة بالأسفل (مثلاً "أول نسخة") واضغطي **Commit changes**
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-### 2. ربط GitHub بـ Cloudflare Pages
-1. Cloudflare Dashboard → من القائمة الجانبية دور على **Workers & Pages**
-2. اضغطي **Create application** → تبويب **Pages** → **Connect to Git**
-3. اختاري حساب GitHub، ثم المستودع `vidreward-admin`
-4. بإعدادات البناء (Build settings):
-   - **Framework preset:** None
-   - **Build command:** اتركيه **فارغ**
-   - **Build output directory:** `/` (نقطة واحدة أو سلاش، يعني جذر المشروع)
-5. اضغطي **Save and Deploy**
+## Expanding the Oxlint configuration
 
-بعد دقيقة أو اثنين، راح يعطيكِ رابط دائم شكله:
-```
-https://vidreward-admin.pages.dev
-```
-
-هذا هو رابط لوحة التحكم النهائي، تقدري تفتحيه من أي جهاز أو موبايل.
-
----
-
-## تحديث المشروع لاحقاً
-أي مرة نبني جزء جديد (صفحة مستخدمين، سحوبات...)، الطريقة:
-1. نبعتلك الملفات الجديدة
-2. تضيفيها/تستبدليها بنفس مستودع GitHub (نفس طريقة الرفع تحت "Add file" → "Upload files")
-3. Cloudflare Pages ينشر التحديث **تلقائياً** خلال ثواني، بدون أي خطوة إضافية
-
----
-
-## بنية المشروع
-```
-vidreward-admin/
-├── index.html          ← صفحة تسجيل الدخول
-├── dashboard.html       ← الصفحة الرئيسية بعد الدخول
-└── assets/
-    ├── css/
-    │   └── theme.css    ← نظام التصميم (Neumorphism + Dark/Light)
-    └── js/
-        ├── config.js    ← إعدادات الاتصال بـ Supabase
-        ├── theme.js     ← منطق تبديل الوضع الليلي/النهاري
-        ├── auth.js      ← منطق تسجيل الدخول
-        └── dashboard.js ← منطق جلب وعرض الإحصائيات
-```
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
