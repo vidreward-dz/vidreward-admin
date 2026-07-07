@@ -3,31 +3,6 @@ import AppLayout from "../components/AppLayout";
 import { callFunction, AuthError } from "../lib/supabaseClient";
 import { useAuth } from "../lib/useAuth";
 
-/**
- * ============================================================================
- * عقد الـ Edge Functions (مطابق فعلياً لكود admin-get-upload-url /
- * admin-create-video / admin-delete-video اللي تأكدنا منه):
- *
- *  POST admin-get-upload-url  body:{ fileName, fileType }  (fileType لازم يبدأ بـ "video/")
- *       -> { uploadUrl, fileKey, publicUrl }
- *
- *  POST admin-create-video    body:{
- *         campaignId (إجباري — لازم حملة موجودة مسبقاً بالجدول),
- *         title (إجباري), description, videoUrl (إجباري), thumbnailUrl,
- *         durationSecs (إجباري، رقم > 0), rewardAmount (إجباري، رقم > 0),
- *         minWatchPct, facebookUrl, tiktokUrl, whatsappUrl, websiteUrl
- *       } -> { success: true, video: {...} }
- *
- *  POST admin-delete-video    body:{ videoId }  -> { success: true }
- *
- * ⚠️ ملاحظة: لا يوجد Edge Function لجلب قائمة الحملات أو الفيديوهات —
- * الصفحة تقرأ مباشرة من جداول "videos" و"campaigns" عبر عميل Supabase
- * (يعمل فقط لو RLS يسمح لدور admin بالقراءة الكاملة عبر is_admin()).
- * لو ظهر خطأ صلاحيات (permission denied) عند التحميل، فهذا يعني إننا
- * نحتاج Edge Function إضافية (admin-list-videos) بنفس نمط البقية.
- * ============================================================================
- */
-
 async function requestUploadUrl({ fileName, fileType }) {
   return callFunction("admin-get-upload-url", {
     body: { fileName, fileType },
@@ -42,20 +17,21 @@ async function deleteVideoRecord(videoId) {
   return callFunction("admin-delete-video", { body: { videoId } });
 }
 
-function uploadWithProgress(uploadUrl, file, onProgress) {
+async function uploadWithProgress(uploadUrl, file, onProgress) {
+  const buffer = await file.arrayBuffer();
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error("فشل رفع الملف إلى التخزين (تأكدي من CORS Policy بالـ R2 Bucket)"));
+      else reject(new Error(`فشل رفع الملف إلى التخزين (HTTP ${xhr.status})`));
     };
     xhr.onerror = () => reject(new Error("تعذّر الاتصال أثناء الرفع (تأكدي من CORS Policy بالـ R2 Bucket)"));
-    xhr.send(file);
+    xhr.send(buffer);
   });
 }
 
@@ -291,7 +267,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState("idle"); // idle | detecting | requesting | uploading | saving
+  const [stage, setStage] = useState("idle");
 
   const busy = stage !== "idle";
   const noCampaigns = campaigns !== null && campaigns.length === 0;
