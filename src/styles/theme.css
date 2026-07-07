@@ -1,0 +1,246 @@
+/* ============================================================
+   VidReward DZ — Admin Panel Design System v3 (React)
+   بنفسجي-نيلي + Neumorphism + Dark/Light + توقيع بصري: لمعان زجاجي
+   متحرك على العناصر المميزة (البطاقات، الأزرار الأساسية، الشعار)
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;700;900&display=swap");
+
+:root {
+  --bg: #e8eaf0;
+  --bg-elevated: #eef0f6;
+  --shadow-light: #ffffff;
+  --shadow-dark: #c5c8d4;
+
+  --text-primary: #3d4066;
+  --text-secondary: #8b8fad;
+
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --green: #10b981;
+  --green-soft: rgba(16, 185, 129, 0.12);
+  --gold: #f59e0b;
+  --gold-soft: rgba(245, 158, 11, 0.12);
+  --red: #ef4444;
+  --red-soft: rgba(239, 68, 68, 0.12);
+
+  --border: rgba(99, 102, 241, 0.08);
+
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  --font-display: "Cairo", sans-serif;
+  --font-body: "Cairo", sans-serif;
+  --font-num: "Inter", sans-serif;
+}
+
+html[data-theme="dark"] {
+  --bg: #1a1c2e;
+  --bg-elevated: #212339;
+  --shadow-light: #2a2d47;
+  --shadow-dark: #101223;
+
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b8fad;
+
+  --accent: #818cf8;
+  --accent2: #a5b4fc;
+  --accent-soft: rgba(129, 140, 248, 0.15);
+  --green: #34d399;
+  --green-soft: rgba(52, 211, 153, 0.15);
+  --gold: #fbbf24;
+  --gold-soft: rgba(251, 191, 36, 0.15);
+  --red: #f87171;
+  --red-soft: rgba(248, 113, 113, 0.15);
+
+  --border: rgba(129, 140, 248, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  direction: rtl;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+.num { font-family: var(--font-num); }
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  margin: 0;
+}
+
+button, input, textarea { font-family: inherit; }
+
+/* ---------- Neumorphism base ---------- */
+.neu {
+  background: var(--bg-elevated);
+  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+}
+.neu-in {
+  background: var(--bg);
+  box-shadow: inset 4px 4px 10px var(--shadow-dark), inset -4px -4px 10px var(--shadow-light);
+}
+.neu-sm {
+  background: var(--bg-elevated);
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+}
+
+.neu-btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px 18px;
+  cursor: pointer;
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  transition: all 0.2s ease;
+}
+.neu-btn:hover { transform: translateY(-1px); }
+.neu-btn:active {
+  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  transform: translateY(0);
+}
+.neu-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ---------- Signature: لمعان زجاجي متحرك (shine sweep) ---------- */
+.neu-btn-accent, .shine {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 4px 4px 16px var(--accent-soft), 0 0 0 1px rgba(255,255,255,0.04) inset;
+}
+.neu-btn-accent::after, .shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.35) 36%,
+    rgba(255, 255, 255, 0.55) 42%,
+    transparent 56%
+  );
+  transform: translateX(-120%);
+  animation: shine-sweep 4.5s ease-in-out infinite;
+}
+.neu-btn-accent:hover::after { animation-duration: 1.4s; }
+
+@keyframes shine-sweep {
+  0% { transform: translateX(-120%); }
+  35% { transform: translateX(140%); }
+  100% { transform: translateX(140%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neu-btn-accent::after, .shine::after { animation: none; display: none; }
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+.glow-icon {
+  position: relative;
+}
+.glow-icon::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  background: inherit;
+  filter: blur(10px);
+  opacity: 0.55;
+  z-index: -1;
+}
+
+.neu-input {
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+.neu-input:focus {
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light),
+    0 0 0 2px var(--accent-soft);
+}
+.neu-input::placeholder { color: var(--text-secondary); }
+
+.card { border-radius: var(--radius-lg); overflow: hidden; }
+.card-header {
+  padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 2px solid var(--border);
+}
+.card-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card-title svg { width: 18px; height: 18px; color: var(--accent); }
+.card-body { padding: 20px; }
+
+.theme-toggle {
+  display: inline-flex; align-items: center;
+  width: 60px; height: 32px; border-radius: 999px;
+  background: var(--bg);
+  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  padding: 3px; cursor: pointer; border: none; position: relative;
+}
+.theme-toggle .knob {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg-elevated);
+  box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: transform 0.25s ease; position: absolute; right: 3px;
+}
+html[data-theme="dark"] .theme-toggle .knob { transform: translateX(-28px); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Spinner ---------- */
+.spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner-dark {
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+}
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  padding: 13px 20px; border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 700; z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  animation: toast-in 0.25s ease;
+}
+.toast-success { background: var(--green); color: white; }
+.toast-error { background: var(--red); color: white; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
