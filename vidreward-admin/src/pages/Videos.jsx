@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AppLayout from "../components/AppLayout";
-import { supabase, callFunction, AuthError } from "../lib/supabaseClient";
+import { callFunction, AuthError } from "../lib/supabaseClient";
 import { useAuth } from "../lib/useAuth";
 
 /**
@@ -96,25 +96,26 @@ export default function Videos() {
 
   async function loadVideos() {
     setLoadError("");
-    const { data, error } = await supabase
-      .from("videos")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setLoadError("تعذّر تحميل قائمة الفيديوهات: " + error.message);
+    try {
+      const { videos } = await callFunction("admin-list-videos", { method: "GET" });
+      setVideos(videos ?? []);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        await signOut();
+        return;
+      }
+      setLoadError("تعذّر تحميل قائمة الفيديوهات: " + err.message);
       setVideos([]);
-      return;
     }
-    setVideos(data ?? []);
   }
 
   async function loadCampaigns() {
-    const { data, error } = await supabase
-      .from("campaigns")
-      .select("id, title, status")
-      .order("created_at", { ascending: false });
-    setCampaigns(error ? [] : data ?? []);
+    try {
+      const { campaigns } = await callFunction("admin-list-campaigns", { method: "GET" });
+      setCampaigns(campaigns ?? []);
+    } catch {
+      setCampaigns([]);
+    }
   }
 
   useEffect(() => {
@@ -377,9 +378,19 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
 
         <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>الحملة (Campaign) *</label>
         {noCampaigns ? (
-          <div style={{ fontSize: 12, color: "var(--red)", background: "var(--red-soft)", padding: "10px 14px", borderRadius: 12, marginBottom: 14 }}>
-            لا توجد أي حملة بقاعدة البيانات. لازم تنشئي حملة (وحساب معلن تابع لها) أولاً قبل رفع أي فيديو.
-          </div>
+          <>
+            <div style={{ fontSize: 12, color: "var(--gold)", background: "var(--gold-soft)", padding: "10px 14px", borderRadius: 12, marginBottom: 10 }}>
+              تعذّر جلب قائمة الحملات تلقائياً (على الأغلب بسبب صلاحيات RLS). إذا متأكدة إن الحملة موجودة، الصقي الـ Campaign ID يدوياً:
+            </div>
+            <input
+              className="neu-input"
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              placeholder="مثال: b20a9074-3b88-4976-9ce3-ab41aa706..."
+              disabled={busy}
+              style={{ marginBottom: 14 }}
+            />
+          </>
         ) : (
           <select
             className="neu-input"
@@ -508,7 +519,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         <button
           type="submit"
           className="neu-btn neu-btn-accent"
-          disabled={busy || !file || noCampaigns}
+          disabled={busy || !file || !campaignId}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           {busy && <span className="spinner" />}
