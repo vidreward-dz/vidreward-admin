@@ -26,6 +26,7 @@ async function uploadWithProgress(uploadUrl, buffer, onProgress) {
     const xhr = new XMLHttpRequest();
 
     xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -57,6 +58,11 @@ async function uploadWithProgress(uploadUrl, buffer, onProgress) {
       console.error("event:", e);
 
       reject(new Error("تعذر الاتصال أثناء الرفع"));
+      alert(
+        "Status: " + xhr.status +
+        "\nReadyState: " + xhr.readyState +
+        "\nResponse: " + xhr.responseText
+      );
     };
 
     xhr.onabort = () => {
