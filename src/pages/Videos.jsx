@@ -26,7 +26,7 @@ async function uploadWithProgress(uploadUrl, buffer, fileType, onProgress) {
     const xhr = new XMLHttpRequest();
 
     xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.setRequestHeader("Content-Type", fileType);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
