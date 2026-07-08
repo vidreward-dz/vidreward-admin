@@ -17,7 +17,7 @@ async function deleteVideoRecord(videoId) {
   return callFunction("admin-delete-video", { body: { videoId } });
 }
 
-async function uploadWithProgress(uploadUrl, file, buffer, onProgress) {
+async function uploadWithProgress(uploadUrl, buffer, fileType, onProgress) {
   return new Promise((resolve, reject) => {
     console.log("=== uploadWithProgress ===");
     console.log("uploadUrl:", uploadUrl);
@@ -26,7 +26,7 @@ async function uploadWithProgress(uploadUrl, file, buffer, onProgress) {
     const xhr = new XMLHttpRequest();
 
     xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -362,7 +362,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
       
       setStage("uploading");
       setProgress(0);
-      await uploadWithProgress(uploadUrl, file, fileBuffer, setProgress);
+      await uploadWithProgress(uploadUrl, fileBuffer, fileType || "video/mp4", setProgress);
 
       setStage("saving");
       const { video } = await createVideoRecord({
