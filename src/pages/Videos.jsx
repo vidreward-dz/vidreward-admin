@@ -17,9 +17,7 @@ async function deleteVideoRecord(videoId) {
   return callFunction("admin-delete-video", { body: { videoId } });
 }
 
-async function uploadWithProgress(uploadUrl, file, onProgress) {
-  const buffer = await file.arrayBuffer();
-
+async function uploadWithProgress(uploadUrl, buffer, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", uploadUrl, true);
@@ -258,6 +256,8 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
+  const [fileBuffer, setFileBuffer] = useState(null);
+  const [fileReadError, setFileReadError] = useState("");
   const [durationSecs, setDurationSecs] = useState("");
   const [rewardAmount, setRewardAmount] = useState("");
   const [minWatchPct, setMinWatchPct] = useState(80);
@@ -275,10 +275,17 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   async function handleFileChange(e) {
     const f = e.target.files?.[0] ?? null;
     setFile(f);
+    setFileBuffer(null);
+    setFileReadError("");
     if (f) {
       setStage("detecting");
-      const detected = await getVideoDuration(f);
+      const [detected, buffer] = await Promise.all([
+        getVideoDuration(f),
+        f.arrayBuffer().catch(() => null),
+      ]);
       if (detected) setDurationSecs(String(detected));
+      if (buffer) setFileBuffer(buffer);
+      else setFileReadError("تعذّرت قراءة الملف. جربي تختاريه من جديد وارفعي مباشرة بدون تأخير.");
       setStage("idle");
     }
   }
@@ -286,6 +293,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) return onError("رجاءً اختاري ملف الفيديو أولاً");
+    if (!fileBuffer) return onError(fileReadError || "الملف لسه قيد التحضير أو تعذّرت قراءته، جربي تختاريه من جديد");
     if (!campaignId) return onError("رجاءً اختاري الحملة (Campaign) التي يتبعها الفيديو");
     if (!durationSecs || Number(durationSecs) <= 0) return onError("مدة الفيديو (بالثواني) مطلوبة ويجب أن تكون أكبر من صفر");
     if (!rewardAmount || Number(rewardAmount) <= 0) return onError("قيمة المكافأة مطلوبة ويجب أن تكون أكبر من صفر");
@@ -299,7 +307,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
 
       setStage("uploading");
       setProgress(0);
-      await uploadWithProgress(uploadUrl, file, setProgress);
+      await uploadWithProgress(uploadUrl, fileBuffer, setProgress);
 
       setStage("saving");
       const { video } = await createVideoRecord({
@@ -330,7 +338,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
 
   const stageLabel = {
     idle: "رفع الفيديو",
-    detecting: "جارٍ قراءة مدة الفيديو...",
+    detecting: "جارٍ تحضير الملف...",
     requesting: "تجهيز الرفع...",
     uploading: `جارٍ الرفع... ${progress}%`,
     saving: "جارٍ الحفظ...",
@@ -495,7 +503,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         <button
           type="submit"
           className="neu-btn neu-btn-accent"
-          disabled={busy || !file || !campaignId}
+          disabled={busy || !file || !fileBuffer || !campaignId}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           {busy && <span className="spinner" />}
@@ -505,4 +513,3 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
     </div>
   );
 }
- 
