@@ -349,6 +349,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         fileName: file.name,
         fileType: file.type || "video/mp4",
       });
+      alert("uploadUrl");
       
       console.log("uploadUrl:", uploadUrl);
       console.log("publicUrl:", publicUrl); 
