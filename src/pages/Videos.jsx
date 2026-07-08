@@ -19,16 +19,55 @@ async function deleteVideoRecord(videoId) {
 
 async function uploadWithProgress(uploadUrl, buffer, onProgress) {
   return new Promise((resolve, reject) => {
+    console.log("=== uploadWithProgress ===");
+    console.log("uploadUrl:", uploadUrl);
+    console.log("buffer size:", buffer?.byteLength);
+
     const xhr = new XMLHttpRequest();
+
     xhr.open("PUT", uploadUrl, true);
+
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        console.log("Progress:", percent + "%");
+        onProgress(percent);
+      }
     };
+
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`فشل رفع الملف إلى التخزين (HTTP ${xhr.status})`));
+      console.log("UPLOAD FINISHED");
+      console.log("Status:", xhr.status);
+      console.log("Response:", xhr.responseText);
+      console.log("Headers:", xhr.getAllResponseHeaders());
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`فشل رفع الملف إلى التخزين (HTTP ${xhr.status})`));
+      }
     };
-    xhr.onerror = () => reject(new Error("تعذّر الاتصال أثناء الرفع (تأكدي من CORS Policy بالـ R2 Bucket)"));
+
+    xhr.onerror = (e) => {
+      console.error("UPLOAD ERROR");
+      console.error("status:", xhr.status);
+      console.error("readyState:", xhr.readyState);
+      console.error("response:", xhr.response);
+      console.error("responseText:", xhr.responseText);
+      console.error("event:", e);
+
+      reject(new Error("تعذر الاتصال أثناء الرفع"));
+    };
+
+    xhr.onabort = () => {
+      console.error("UPLOAD ABORTED");
+    };
+
+    xhr.ontimeout = () => {
+      console.error("UPLOAD TIMEOUT");
+    };
+
+    console.log("Sending file...");
     xhr.send(buffer);
   });
 }
@@ -300,11 +339,20 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
 
     try {
       setStage("requesting");
+      console.log("=== START UPLOAD ===");
+      console.log("file:", file);
+      console.log("name:", file.name);
+      console.log("type:", file.type);
+      console.log("size:", file.size);
+      console.log("buffer:", fileBuffer?.byteLength);
       const { uploadUrl, publicUrl } = await requestUploadUrl({
         fileName: file.name,
         fileType: file.type || "video/mp4",
       });
-
+      
+      console.log("uploadUrl:", uploadUrl);
+      console.log("publicUrl:", publicUrl); 
+      
       setStage("uploading");
       setProgress(0);
       await uploadWithProgress(uploadUrl, fileBuffer, setProgress);
