@@ -17,64 +17,35 @@ async function deleteVideoRecord(videoId) {
   return callFunction("admin-delete-video", { body: { videoId } });
 }
 
-async function uploadWithProgress(uploadUrl, buffer, fileType, onProgress) {
+// يرفع ملف الفيديو مباشرة (بدون تحويله لـ ArrayBuffer — أخف على ذاكرة
+// المتصفح خصوصاً بالموبايل مع فيديوهات كبيرة، وXHR يدعم File/Blob مباشرة)
+function uploadWithProgress(uploadUrl, file, onProgress) {
   return new Promise((resolve, reject) => {
-    console.log("=== uploadWithProgress ===");
-    console.log("uploadUrl:", uploadUrl);
-    console.log("buffer size:", buffer?.byteLength);
-
     const xhr = new XMLHttpRequest();
-
     xhr.open("PUT", uploadUrl, true);
-    xhr.setRequestHeader("Content-Type", fileType);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
 
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        const percent = Math.round((e.loaded / e.total) * 100);
-        console.log("Progress:", percent + "%");
-        onProgress(percent);
-      }
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
 
     xhr.onload = () => {
-      console.log("UPLOAD FINISHED");
-      console.log("Status:", xhr.status);
-      console.log("Response:", xhr.responseText);
-      console.log("Headers:", xhr.getAllResponseHeaders());
-
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        reject(new Error(`فشل رفع الملف إلى التخزين (HTTP ${xhr.status})`));
+        console.error("Upload failed:", xhr.status, xhr.responseText);
+        reject(new Error(`فشل رفع الملف إلى التخزين (HTTP ${xhr.status}). تأكدي من CORS Policy بالـ R2 Bucket.`));
       }
     };
 
-    xhr.onerror = (e) => {
-      console.error("UPLOAD ERROR");
-      console.error("status:", xhr.status);
-      console.error("readyState:", xhr.readyState);
-      console.error("response:", xhr.response);
-      console.error("responseText:", xhr.responseText);
-      console.error("event:", e);
-
-      reject(new Error("تعذر الاتصال أثناء الرفع"));
-      alert(
-        "Status: " + xhr.status +
-        "\nReadyState: " + xhr.readyState +
-        "\nResponse: " + xhr.responseText
-      );
+    xhr.onerror = () => {
+      console.error("Upload network error, readyState:", xhr.readyState);
+      reject(new Error("تعذّر الاتصال أثناء الرفع (تأكدي من CORS Policy بالـ R2 Bucket)"));
     };
 
-    xhr.onabort = () => {
-      console.error("UPLOAD ABORTED");
-    };
+    xhr.ontimeout = () => reject(new Error("انتهت مهلة الرفع (الفيديو كبير جداً أو الاتصال بطيء)"));
 
-    xhr.ontimeout = () => {
-      console.error("UPLOAD TIMEOUT");
-    };
-
-    console.log("Sending file...");
-    xhr.send(buffer);
+    xhr.send(file);
   });
 }
 
@@ -301,8 +272,6 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
-  const [fileBuffer, setFileBuffer] = useState(null);
-  const [fileReadError, setFileReadError] = useState("");
   const [durationSecs, setDurationSecs] = useState("");
   const [rewardAmount, setRewardAmount] = useState("");
   const [minWatchPct, setMinWatchPct] = useState(80);
@@ -312,7 +281,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState("idle");
+  const [stage, setStage] = useState("idle"); // idle | detecting | requesting | uploading | saving
 
   const busy = stage !== "idle";
   const noCampaigns = campaigns !== null && campaigns.length === 0;
@@ -320,17 +289,10 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   async function handleFileChange(e) {
     const f = e.target.files?.[0] ?? null;
     setFile(f);
-    setFileBuffer(null);
-    setFileReadError("");
     if (f) {
       setStage("detecting");
-      const [detected, buffer] = await Promise.all([
-        getVideoDuration(f),
-        f.arrayBuffer().catch(() => null),
-      ]);
+      const detected = await getVideoDuration(f);
       if (detected) setDurationSecs(String(detected));
-      if (buffer) setFileBuffer(buffer);
-      else setFileReadError("تعذّرت قراءة الملف. جربي تختاريه من جديد وارفعي مباشرة بدون تأخير.");
       setStage("idle");
     }
   }
@@ -338,31 +300,20 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) return onError("رجاءً اختاري ملف الفيديو أولاً");
-    if (!fileBuffer) return onError(fileReadError || "الملف لسه قيد التحضير أو تعذّرت قراءته، جربي تختاريه من جديد");
     if (!campaignId) return onError("رجاءً اختاري الحملة (Campaign) التي يتبعها الفيديو");
     if (!durationSecs || Number(durationSecs) <= 0) return onError("مدة الفيديو (بالثواني) مطلوبة ويجب أن تكون أكبر من صفر");
     if (!rewardAmount || Number(rewardAmount) <= 0) return onError("قيمة المكافأة مطلوبة ويجب أن تكون أكبر من صفر");
 
     try {
       setStage("requesting");
-      console.log("=== START UPLOAD ===");
-      console.log("file:", file);
-      console.log("name:", file.name);
-      console.log("type:", file.type);
-      console.log("size:", file.size);
-      console.log("buffer:", fileBuffer?.byteLength);
       const { uploadUrl, publicUrl } = await requestUploadUrl({
         fileName: file.name,
         fileType: file.type || "video/mp4",
       });
-      alert(uploadUrl);
-      
-      console.log("uploadUrl:", uploadUrl);
-      console.log("publicUrl:", publicUrl); 
-      
+
       setStage("uploading");
       setProgress(0);
-      await uploadWithProgress(uploadUrl, fileBuffer, fileType || "video/mp4", setProgress);
+      await uploadWithProgress(uploadUrl, file, setProgress);
 
       setStage("saving");
       const { video } = await createVideoRecord({
@@ -393,7 +344,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
 
   const stageLabel = {
     idle: "رفع الفيديو",
-    detecting: "جارٍ تحضير الملف...",
+    detecting: "جارٍ قراءة مدة الفيديو...",
     requesting: "تجهيز الرفع...",
     uploading: `جارٍ الرفع... ${progress}%`,
     saving: "جارٍ الحفظ...",
@@ -558,7 +509,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         <button
           type="submit"
           className="neu-btn neu-btn-accent"
-          disabled={busy || !file || !fileBuffer || !campaignId}
+          disabled={busy || !file || !campaignId}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
           {busy && <span className="spinner" />}
