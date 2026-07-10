@@ -4,6 +4,7 @@ import RequireAuth from "./components/RequireAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Videos from "./pages/Videos";
+import Withdrawals from "./pages/Withdrawals";
 
 export default function App() {
   return (
@@ -24,6 +25,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <Videos />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/withdrawals"
+            element={
+              <RequireAuth>
+                <Withdrawals />
               </RequireAuth>
             }
           />
