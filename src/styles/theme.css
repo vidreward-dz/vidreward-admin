@@ -244,3 +244,20 @@ html[data-theme="dark"] .theme-toggle .knob { transform: translateX(-28px); }
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ============================================================
+   Sidebar/Dashboard re-skin — floating card shell + dark sidebar
+   (يستعمل نفس متغيرات Neumorphism، فقط طبقة بصرية إضافية)
+   ============================================================ */
+:root {
+  --canvas-bg: #d7d9e3;
+  --sidebar-bg-start: #16394a;
+  --sidebar-bg-end: #0d2029;
+  --sidebar-text: #b9c9cd;
+  --sidebar-text-dim: #7d97a0;
+}
+html[data-theme="dark"] {
+  --canvas-bg: #0c0e18;
+  --sidebar-bg-start: #0f2a36;
+  --sidebar-bg-end: #081a21;
+}
