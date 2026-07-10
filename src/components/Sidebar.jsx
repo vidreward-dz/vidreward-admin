@@ -23,7 +23,7 @@ const NAV = [
   },
   {
     section: "المالية",
-    items: [{ label: "السحوبات", icon: "💳", disabled: true }],
+    items: [{ to: "/withdrawals", label: "السحوبات", icon: "💳" }],
   },
   {
     section: "الأدوات",
