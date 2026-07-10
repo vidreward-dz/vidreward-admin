@@ -34,17 +34,26 @@ const NAV = [
   },
 ];
 
+function initials(email) {
+  if (!email) return "أ";
+  return email[0].toUpperCase();
+}
+
 export default function Sidebar() {
   const { session, signOut } = useAuth();
+  const email = session?.user?.email;
 
   return (
-    <aside className="sidebar neu">
-      <div className="logo">
-        <div className="logo-icon glow-icon">🎬</div>
-        <div>
-          <div className="logo-name display">VidReward DZ</div>
-          <div className="logo-sub">ADMIN PANEL</div>
-        </div>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <span className="sidebar-brand-icon">🎬</span>
+        <span className="sidebar-brand-text">VidReward DZ</span>
+      </div>
+
+      <div className="sidebar-profile">
+        <div className="sidebar-avatar">{initials(email)}</div>
+        <div className="sidebar-name">{email ?? "أدمن"}</div>
+        <div className="sidebar-email">Administrator</div>
       </div>
 
       <nav className="nav">
@@ -63,7 +72,7 @@ export default function Sidebar() {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `nav-item ${isActive ? "active neu-sm" : ""}`
+                    `nav-item ${isActive ? "active" : ""}`
                   }
                 >
                   <span>{item.icon}</span>
@@ -76,13 +85,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        <div className="admin-card neu-in">
-          <div className="admin-av">👤</div>
-          <div>
-            <div className="admin-name">{session?.user?.email ?? "أدمن"}</div>
-            <div className="admin-role">Administrator</div>
-          </div>
-        </div>
         <button className="logout-link" onClick={signOut}>
           تسجيل الخروج
         </button>
