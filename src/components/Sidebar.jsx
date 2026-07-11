@@ -9,8 +9,8 @@ const NAV = [
   {
     section: "المستخدمون",
     items: [
-      { label: "المستخدمين", icon: "👥", disabled: true },
-      { label: "حسابات مشبوهة", icon: "🚩", disabled: true },
+      { to: "/users", label: "المستخدمين", icon: "👥" },
+      { to: "/users?filter=suspicious", label: "حسابات مشبوهة", icon: "🚩" },
     ],
   },
   {
