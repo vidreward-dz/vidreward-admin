@@ -38,7 +38,7 @@ export default function App() {
             }
           /> 
           <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} />          
-          <Route path="*" element={<Login />} />
+          <Route path="*" element={<Login />} /> 
         </Routes>
       </AuthProvider>
     </BrowserRouter>
