@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "../components/AppLayout";
 import { callFunction, AuthError } from "../lib/supabaseClient"; 
-import { useAuth } from "../lib/useAuth";
+import { useAuth } from "../lib/useAuth"; 
 
 function formatDate(iso) {
   if (!iso) return "—";
