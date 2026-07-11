@@ -37,7 +37,7 @@ export default function App() {
               </RequireAuth>
             }
           /> 
-          <Route path="/Users" element={<RequireAuth>< /></RequireAuth>} />          
+          <Route path="/Users" element={<RequireAuth><Users /></RequireAuth>} />          
           <Route path="*" element={<Login />} />
         </Routes>
       </AuthProvider>
