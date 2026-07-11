@@ -4,7 +4,7 @@ import RequireAuth from "./components/RequireAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Videos from "./pages/Videos";
-import Withdrawals from "./pages/Withdrawals";
+import Withdrawals from "./pages/Withdrawals"; 
 import Users from "./pages/Users";
 
 export default function App() {
