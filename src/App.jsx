@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./lib/useAuth";
-import RequireAuth from "./components/RequireAuth";
+import RequireAuth from "./components/RequireAuth"; 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Videos from "./pages/Videos";
