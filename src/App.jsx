@@ -13,7 +13,7 @@ import Notifications from "./pages/Notifications";
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
+      <AuthProvider> 
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route 
