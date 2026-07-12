@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Videos from "./pages/Videos";
 import Withdrawals from "./pages/Withdrawals"; 
 import Users from "./pages/Users";
+import Campaigns from "./pages/Campaigns";
 
 export default function App() {
   return (
@@ -37,7 +38,8 @@ export default function App() {
               </RequireAuth>
             }
           /> 
-          <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} />          
+          <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} /> 
+          <Route path="/campaigns" element={<RequireAuth><Campaigns /></RequireAuth>} /> 
           <Route path="*" element={<Login />} /> 
         </Routes>
       </AuthProvider>
