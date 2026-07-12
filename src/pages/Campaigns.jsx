@@ -33,6 +33,21 @@ function toDateInputValue(iso) {
   return String(iso).slice(0, 10);
 }
 
+const ALL_WILAYAS = [
+  'أدرار', 'الشلف', 'الأغواط', 'أم البواقي', 'باتنة', 'بجاية', 'بسكرة',
+  'بشار', 'البليدة', 'البويرة', 'تمنراست', 'تبسة', 'تلمسان', 'تيارت',
+  'تيزي وزو', 'الجزائر العاصمة', 'الجلفة', 'جيجل', 'سطيف', 'سعيدة',
+  'سكيكدة', 'سيدي بلعباس', 'عنابة', 'قالمة', 'قسنطينة', 'المدية',
+  'مستغانم', 'المسيلة', 'معسكر', 'ورقلة', 'وهران', 'البيض', 'إليزي',
+  'برج بوعريريج', 'بومرداس', 'الطارف', 'تندوف', 'تيسمسيلت', 'الوادي',
+  'خنشلة', 'سوق أهراس', 'تيبازة', 'ميلة', 'عين الدفلى', 'النعامة',
+  'عين تموشنت', 'غرداية', 'غليزان', 'تيميمون', 'برج باجي مختار',
+  'أولاد جلال', 'بني عباس', 'عين صالح', 'عين قزام', 'تقرت', 'جانت',
+  'المغير', 'المنيعة', 'آفلو', 'بريكة', 'القنطرة', 'بئر العاتر',
+  'العريشة', 'قصر الشلالة', 'عين وسارة', 'مسعد', 'قصر البخاري',
+  'بوسعادة', 'الأبيض سيدي الشيخ',
+];
+
 const emptyForm = {
   advertiserId: "",
   title: "",
@@ -42,7 +57,7 @@ const emptyForm = {
   targetViews: "",
   status: "pending",
   startsAt: "",
-  endsAt: "",
+  targetWilayas: [], // فاضية = كل الولايات (بلا استهداف)
   adminNote: "",
 };
 
@@ -105,7 +120,7 @@ export default function Campaigns() {
         targetViews: c.target_views ?? "",
         status: c.status ?? "pending",
         startsAt: toDateInputValue(c.starts_at),
-        endsAt: toDateInputValue(c.ends_at),
+        targetWilayas: Array.isArray(c.target_wilayas) ? c.target_wilayas : [],
         adminNote: c.admin_note ?? "",
       },
     });
@@ -134,7 +149,7 @@ export default function Campaigns() {
         targetViews: Number(f.targetViews),
         status: f.status,
         startsAt: f.startsAt || null,
-        endsAt: f.endsAt || null,
+        targetWilayas: f.targetWilayas,
         adminNote: f.adminNote,
       };
 
@@ -244,6 +259,15 @@ export default function Campaigns() {
                         <td style={{ padding: "14px 20px", fontSize: 12 }} className="num">{Number(c.cost_per_view).toLocaleString("ar-DZ")} دج</td>
                         <td style={{ padding: "14px 20px", fontSize: 11, color: "var(--text-secondary)", whiteSpace: "nowrap" }} className="num">
                           {formatDate(c.starts_at)} — {formatDate(c.ends_at)}
+                          <div style={{ marginTop: 3 }}>
+                            {Array.isArray(c.target_wilayas) && c.target_wilayas.length > 0 ? (
+                              <span title={c.target_wilayas.join("، ")} style={{ fontSize: 10, color: "var(--accent)" }}>
+                                📍 {c.target_wilayas.length} ولاية
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>🌍 كل الولايات</span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: "14px 20px" }}>
                           <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: colors.bg, color: colors.fg }}>
@@ -344,15 +368,54 @@ export default function Campaigns() {
               style={{ marginBottom: 14 }}
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>تاريخ البداية</label>
-                <input className="neu-input" type="date" value={modal.form.startsAt} onChange={(e) => updateForm({ startsAt: e.target.value })} disabled={busy} />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>تاريخ البداية</label>
+              <input
+                className="neu-input" type="date" value={modal.form.startsAt}
+                onChange={(e) => updateForm({ startsAt: e.target.value })}
+                disabled={busy}
+                style={{ maxWidth: 220 }}
+              />
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 6 }}>
+                📌 تاريخ النهاية تلقائي — يُسجَّل بنفسه فور بلوغ عدد المشاهدات المستهدف.
               </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>تاريخ النهاية</label>
-                <input className="neu-input" type="date" value={modal.form.endsAt} onChange={(e) => updateForm({ endsAt: e.target.value })} disabled={busy} />
-              </div>
+            </div>
+
+            <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>
+              الولاية المستهدفة
+              <span style={{ fontWeight: 400, color: "var(--text-secondary)" }}>
+                {" "}({modal.form.targetWilayas.length === 0 ? "كل الولايات" : `${modal.form.targetWilayas.length} محددة`})
+              </span>
+            </label>
+            <div
+              className="neu-input"
+              style={{ marginBottom: 14, padding: 10, maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "6px 4px", fontWeight: 700, borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={modal.form.targetWilayas.length === 0}
+                  onChange={() => updateForm({ targetWilayas: [] })}
+                  disabled={busy}
+                />
+                كل الولايات (بلا استهداف)
+              </label>
+              {ALL_WILAYAS.map((w) => (
+                <label key={w} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "4px 4px" }}>
+                  <input
+                    type="checkbox"
+                    checked={modal.form.targetWilayas.includes(w)}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...modal.form.targetWilayas, w]
+                        : modal.form.targetWilayas.filter((x) => x !== w);
+                      updateForm({ targetWilayas: next });
+                    }}
+                  />
+                  {w}
+                </label>
+              ))}
             </div>
 
             <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>الحالة</label>
