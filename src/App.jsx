@@ -43,7 +43,7 @@ export default function App() {
           <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} /> 
           <Route path="/campaigns" element={<RequireAuth><Campaigns /></RequireAuth>} /> 
           <Route path="/advertisers" element={<RequireAuth><Advertisers /></RequireAuth>} />
-          <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="*" element={<Login />} /> 
         </Routes>
       </AuthProvider>
