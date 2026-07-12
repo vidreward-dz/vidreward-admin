@@ -8,6 +8,7 @@ import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
 import Campaigns from "./pages/Campaigns";
 import Advertisers from "./pages/Advertisers";
+import Notifications from "./pages/Notifications";
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} /> 
           <Route path="/campaigns" element={<RequireAuth><Campaigns /></RequireAuth>} /> 
           <Route path="/advertisers" element={<RequireAuth><Advertisers /></RequireAuth>} />
+          <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
           <Route path="*" element={<Login />} /> 
         </Routes>
       </AuthProvider>
