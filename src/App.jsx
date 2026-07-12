@@ -8,7 +8,7 @@ import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
 import Campaigns from "./pages/Campaigns";
 import Advertisers from "./pages/Advertisers";
-import Notifications from "./pages/Notifications";
+import Notifications from "./pages/Notifications"; 
 
 export default function App() {
   return (
