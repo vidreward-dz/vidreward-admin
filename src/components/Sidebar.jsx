@@ -18,7 +18,7 @@ const NAV = [
     items: [
       { to: "/videos", label: "الفيديوهات", icon: "🎥" },
       { to: "/campaigns", label: "الحملات", icon: "📢" },
-      { label: "المعلنين", icon: "🏢", disabled: true },
+      { to: "/advertisers", label: "المعلنين", icon: "🏢" }, 
     ],
   },
   {
