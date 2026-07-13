@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
-import "../styles/notifications.css";
+import { useEffect, useState } from "react";
+import AppLayout from "../components/AppLayout";
+import { callFunction, AuthError } from "../lib/supabaseClient";
+import { useAuth } from "../lib/useAuth";
 
 const WILAYAS = [
   "أدرار", "الشلف", "الأغواط", "أم البواقي", "باتنة", "بجاية", "بسكرة", "بشار",
@@ -13,8 +14,19 @@ const WILAYAS = [
   "عين صالح", "عين قزام", "تقرت", "جانت", "المغير", "المنيعة",
 ];
 
+function formatDate(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("ar-DZ", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
 export default function Notifications() {
-  const [activeTab, setActiveTab] = useState("send"); // "send" | "internal"
+  const { signOut } = useAuth();
+  const [tab, setTab] = useState("send"); // send | internal
+  const [toast, setToast] = useState(null);
 
   // --- إرسال إشعار ---
   const [type, setType] = useState("broadcast");
@@ -23,168 +35,110 @@ export default function Notifications() {
   const [selectedWilayas, setSelectedWilayas] = useState([]);
   const [targetUserId, setTargetUserId] = useState("");
   const [sending, setSending] = useState(false);
-  const [toast, setToast] = useState(null); // { type: 'success'|'error', msg }
 
   // --- إشعارات الأدمن الداخلية ---
-  const [internalNotifs, setInternalNotifs] = useState([]);
+  const [notifs, setNotifs] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loadingInternal, setLoadingInternal] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-  useEffect(() => {
-    if (activeTab === "internal") fetchInternalNotifications();
-  }, [activeTab]);
+  function showToast(type, text) {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  }
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  async function fetchInternalNotifications() {
-    setLoadingInternal(true);
+  async function loadInternal() {
+    setLoadError("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-notifications`,
-        { headers: { Authorization: `Bearer ${session.access_token}` } }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setInternalNotifs(data.notifications || []);
-        setUnreadCount(data.unread_count || 0);
-      }
+      const data = await callFunction("admin-list-notifications", { method: "GET" });
+      setNotifs(data.notifications ?? []);
+      setUnreadCount(data.unread_count ?? 0);
     } catch (err) {
-      console.error("خطأ فجلب الإشعارات:", err);
-    } finally {
-      setLoadingInternal(false);
+      if (err instanceof AuthError) return signOut();
+      setLoadError("تعذّر تحميل الإشعارات: " + err.message);
+      setNotifs([]);
     }
   }
 
-  async function markAsRead(notificationId) {
+  useEffect(() => {
+    if (tab === "internal") loadInternal();
+  }, [tab]);
+
+  async function markAsRead(id) {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-mark-notification-read`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ notification_id: notificationId }),
-        }
-      );
-      if (res.ok) {
-        setInternalNotifs((prev) =>
-          prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
+      await callFunction("admin-mark-notification-read", { body: { notification_id: id } });
+      setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      console.error("خطأ فتعليم الإشعار كمقروء:", err);
+      if (err instanceof AuthError) return signOut();
     }
   }
 
-  function toggleWilaya(wilaya) {
-    setSelectedWilayas((prev) =>
-      prev.includes(wilaya) ? prev.filter((w) => w !== wilaya) : [...prev, wilaya]
-    );
+  function toggleWilaya(w) {
+    setSelectedWilayas((prev) => (prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w]));
   }
 
   async function handleSend(e) {
     e.preventDefault();
-
-    if (!title.trim() || !message.trim()) {
-      setToast({ type: "error", msg: "لازم تعبي العنوان والنص" });
-      return;
-    }
-    if (type === "wilaya" && selectedWilayas.length === 0) {
-      setToast({ type: "error", msg: "لازم تختار ولاية وحدة على الأقل" });
-      return;
-    }
-    if (type === "user" && !targetUserId) {
-      setToast({ type: "error", msg: "لازم تدخل User ID" });
-      return;
-    }
+    if (!title.trim() || !message.trim()) return showToast("error", "لازم تعبي العنوان والنص");
+    if (type === "wilaya" && selectedWilayas.length === 0) return showToast("error", "اختر ولاية وحدة على الأقل");
+    if (type === "user" && !targetUserId.trim()) return showToast("error", "لازم تدخل User ID");
 
     setSending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const payload = { type, title, message };
-      if (type === "wilaya") payload.target_wilayas = selectedWilayas;
-      if (type === "user") payload.target_user_id = targetUserId;
+      const body = { type, title: title.trim(), message: message.trim() };
+      if (type === "wilaya") body.target_wilayas = selectedWilayas;
+      if (type === "user") body.target_user_id = targetUserId.trim();
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-send-notification`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-      const data = await res.json();
-
-      if (res.ok) {
-        setToast({ type: "success", msg: "تم إرسال الإشعار بنجاح" });
-        setTitle("");
-        setMessage("");
-        setSelectedWilayas([]);
-        setTargetUserId("");
-      } else {
-        setToast({ type: "error", msg: data.error || "فشل الإرسال" });
-      }
+      await callFunction("admin-send-notification", { body });
+      showToast("success", "تم إرسال الإشعار بنجاح");
+      setTitle("");
+      setMessage("");
+      setSelectedWilayas([]);
+      setTargetUserId("");
     } catch (err) {
-      setToast({ type: "error", msg: "خطأ فالشبكة" });
+      if (err instanceof AuthError) return signOut();
+      showToast("error", err.message || "فشل الإرسال");
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <div className="notif-page">
-      <div className="notif-page-head">
-        <h1 className="display">الإشعارات</h1>
-
-        <div className="notif-tabs neu-in">
+    <AppLayout title="الإشعارات 🔔" subtitle="إرسال إشعارات للمستخدمين ومتابعة إشعارات النظام">
+      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+        {[
+          { key: "send", label: "إرسال إشعار" },
+          { key: "internal", label: `إشعارات الأدمن${unreadCount > 0 ? ` (${unreadCount})` : ""}` },
+        ].map((t) => (
           <button
-            className={`notif-tab ${activeTab === "send" ? "active" : ""}`}
-            onClick={() => setActiveTab("send")}
+            key={t.key}
+            className="neu-btn"
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: "8px 16px",
+              fontSize: 12,
+              fontWeight: 700,
+              ...(tab === t.key ? { background: "var(--accent)", color: "#fff" } : {}),
+            }}
           >
-            إرسال إشعار
+            {t.label}
           </button>
-          <button
-            className={`notif-tab ${activeTab === "internal" ? "active" : ""}`}
-            onClick={() => setActiveTab("internal")}
-          >
-            إشعارات الأدمن
-            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+        ))}
+        {tab === "internal" && (
+          <button className="neu-btn" onClick={loadInternal} style={{ padding: "8px 14px", fontSize: 12, marginRight: "auto" }}>
+            تحديث ↻
           </button>
-        </div>
+        )}
       </div>
 
-      {activeTab === "send" && (
-        <div className="card neu notif-send-card">
-          <div className="card-header">
-            <div className="card-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              إرسال إشعار جديد
-            </div>
-          </div>
-
-          <form className="card-body notif-form" onSubmit={handleSend}>
-            <div className="notif-field">
-              <label>نوع الإشعار</label>
-              <select
-                className="neu-input"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
+      {tab === "send" && (
+        <div className="neu card" style={{ maxWidth: 640 }}>
+          <form onSubmit={handleSend} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                نوع الإشعار
+              </label>
+              <select className="neu-input" value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="broadcast">للجميع (Broadcast)</option>
                 <option value="wilaya">حسب الولاية</option>
                 <option value="user">مستخدم محدد</option>
@@ -192,31 +146,46 @@ export default function Notifications() {
             </div>
 
             {type === "wilaya" && (
-              <div className="notif-field">
-                <label>
-                  اختر الولايات{" "}
-                  {selectedWilayas.length > 0 && (
-                    <span className="notif-count-pill">{selectedWilayas.length}</span>
-                  )}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                  اختر الولايات {selectedWilayas.length > 0 && `(${selectedWilayas.length})`}
                 </label>
-                <div className="wilaya-grid neu-in">
-                  {WILAYAS.map((w) => (
-                    <button
-                      type="button"
-                      key={w}
-                      className={`wilaya-chip ${selectedWilayas.includes(w) ? "active" : ""}`}
-                      onClick={() => toggleWilaya(w)}
-                    >
-                      {w}
-                    </button>
-                  ))}
+                <div
+                  className="neu-in"
+                  style={{
+                    display: "flex", flexWrap: "wrap", gap: 8, padding: 14,
+                    borderRadius: "var(--radius-md)", maxHeight: 220, overflowY: "auto",
+                  }}
+                >
+                  {WILAYAS.map((w) => {
+                    const active = selectedWilayas.includes(w);
+                    return (
+                      <button
+                        type="button"
+                        key={w}
+                        onClick={() => toggleWilaya(w)}
+                        className="neu-btn"
+                        style={{
+                          padding: "6px 13px",
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          borderRadius: 20,
+                          ...(active ? { background: "var(--accent)", color: "#fff" } : {}),
+                        }}
+                      >
+                        {w}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {type === "user" && (
-              <div className="notif-field">
-                <label>معرّف المستخدم (User ID)</label>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                  معرّف المستخدم (User ID)
+                </label>
                 <input
                   className="neu-input"
                   type="text"
@@ -224,14 +193,13 @@ export default function Notifications() {
                   value={targetUserId}
                   onChange={(e) => setTargetUserId(e.target.value)}
                 />
-                <span className="notif-hint">
-                  نصيحة: انسخ الـ ID من صفحة المستخدمين
-                </span>
               </div>
             )}
 
-            <div className="notif-field">
-              <label>العنوان</label>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                العنوان
+              </label>
               <input
                 className="neu-input"
                 type="text"
@@ -241,72 +209,80 @@ export default function Notifications() {
               />
             </div>
 
-            <div className="notif-field">
-              <label>النص</label>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                النص
+              </label>
               <textarea
                 className="neu-input"
                 rows={4}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="نص الإشعار الكامل"
+                style={{ resize: "vertical", width: "100%" }}
               />
             </div>
 
-            <button type="submit" className="neu-btn-accent notif-send-btn" disabled={sending}>
-              {sending ? <span className="spinner" /> : "إرسال الإشعار"}
+            <button
+              type="submit"
+              className="neu-btn neu-btn-accent"
+              disabled={sending}
+              style={{ alignSelf: "flex-start", padding: "12px 26px", fontSize: 13 }}
+            >
+              {sending ? "..." : "إرسال الإشعار"}
             </button>
           </form>
         </div>
       )}
 
-      {activeTab === "internal" && (
-        <div className="card neu">
-          <div className="card-header">
-            <div className="card-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              إشعارات النظام
-            </div>
-          </div>
-
-          <div className="card-body">
-            {loadingInternal ? (
-              <div className="notif-loading">
-                <span className="spinner-dark" />
-              </div>
-            ) : internalNotifs.length === 0 ? (
-              <p className="notif-empty">لا توجد إشعارات</p>
-            ) : (
-              <ul className="notif-list">
-                {internalNotifs.map((n) => (
-                  <li
+      {tab === "internal" && (
+        <div className="neu card">
+          <div className="card-body" style={{ padding: 0 }}>
+            {notifs === null && <EmptyState text="جارٍ التحميل..." />}
+            {loadError && <EmptyState text={loadError} isError />}
+            {notifs !== null && notifs.length === 0 && !loadError && <EmptyState text="لا توجد إشعارات" />}
+            {notifs && notifs.length > 0 && (
+              <div>
+                {notifs.map((n, i) => (
+                  <div
                     key={n.id}
-                    className={`notif-item neu-sm ${n.is_read ? "read" : "unread"}`}
                     onClick={() => !n.is_read && markAsRead(n.id)}
+                    style={{
+                      padding: "16px 20px",
+                      borderBottom: i < notifs.length - 1 ? "1px solid var(--border)" : "none",
+                      cursor: n.is_read ? "default" : "pointer",
+                      opacity: n.is_read ? 0.6 : 1,
+                      borderInlineStart: n.is_read ? "none" : "3px solid var(--gold)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 14,
+                    }}
                   >
-                    <div className="notif-item-top">
-                      <strong>{n.title}</strong>
-                      <span className="notif-item-date">
-                        {new Date(n.created_at).toLocaleString("ar-DZ")}
-                      </span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4 }}>{n.title}</div>
+                      <div style={{ fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>{n.body}</div>
                     </div>
-                    <p>{n.body}</p>
-                    {!n.is_read && <span className="notif-new-dot" />}
-                  </li>
+                    <span style={{ fontSize: 11, color: "var(--text-secondary)", whiteSpace: "nowrap" }} className="num">
+                      {formatDate(n.created_at)}
+                    </span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {toast && (
-        <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.text}</div>}
+    </AppLayout>
+  );
+}
+
+function EmptyState({ text, isError }) {
+  return (
+    <div style={{ padding: "40px 20px", textAlign: "center", color: isError ? "var(--red)" : "var(--text-secondary)", fontSize: 13 }}>
+      {text}
     </div>
   );
 }
