@@ -29,7 +29,7 @@ const NAV = [
     section: "الأدوات",
     items: [
       { to: "/notifications", label: "الإشعارات", icon: "🔔" },
-      { label: "الإعدادات", icon: "⚙️", disabled: true },
+      { to: "/settings", label: "الإعدادات", icon: "⚙️" }
     ],
   },
 ];
