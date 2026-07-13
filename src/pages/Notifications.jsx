@@ -21,10 +21,9 @@ export default function Notifications() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [selectedWilayas, setSelectedWilayas] = useState([]);
-  const [targetUserSearch, setTargetUserSearch] = useState("");
   const [targetUserId, setTargetUserId] = useState("");
   const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState(null);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', msg }
 
   // --- إشعارات الأدمن الداخلية ---
   const [internalNotifs, setInternalNotifs] = useState([]);
@@ -32,10 +31,14 @@ export default function Notifications() {
   const [loadingInternal, setLoadingInternal] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "internal") {
-      fetchInternalNotifications();
-    }
+    if (activeTab === "internal") fetchInternalNotifications();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function fetchInternalNotifications() {
     setLoadingInternal(true);
@@ -43,9 +46,7 @@ export default function Notifications() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-notifications`,
-        {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       const data = await res.json();
       if (res.ok) {
@@ -92,18 +93,17 @@ export default function Notifications() {
 
   async function handleSend(e) {
     e.preventDefault();
-    setSendResult(null);
 
     if (!title.trim() || !message.trim()) {
-      setSendResult({ ok: false, msg: "لازم تعبي العنوان والنص" });
+      setToast({ type: "error", msg: "لازم تعبي العنوان والنص" });
       return;
     }
     if (type === "wilaya" && selectedWilayas.length === 0) {
-      setSendResult({ ok: false, msg: "لازم تختار ولاية وحدة على الأقل" });
+      setToast({ type: "error", msg: "لازم تختار ولاية وحدة على الأقل" });
       return;
     }
     if (type === "user" && !targetUserId) {
-      setSendResult({ ok: false, msg: "لازم تختار مستخدم" });
+      setToast({ type: "error", msg: "لازم تدخل User ID" });
       return;
     }
 
@@ -128,45 +128,57 @@ export default function Notifications() {
       const data = await res.json();
 
       if (res.ok) {
-        setSendResult({ ok: true, msg: "تم إرسال الإشعار بنجاح" });
+        setToast({ type: "success", msg: "تم إرسال الإشعار بنجاح" });
         setTitle("");
         setMessage("");
         setSelectedWilayas([]);
         setTargetUserId("");
-        setTargetUserSearch("");
       } else {
-        setSendResult({ ok: false, msg: data.error || "فشل الإرسال" });
+        setToast({ type: "error", msg: data.error || "فشل الإرسال" });
       }
     } catch (err) {
-      setSendResult({ ok: false, msg: "خطأ فالشبكة" });
+      setToast({ type: "error", msg: "خطأ فالشبكة" });
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <div className="page-container">
-      <h1 className="page-title">الإشعارات</h1>
+    <div className="notif-page">
+      <div className="notif-page-head">
+        <h1 className="display">الإشعارات</h1>
 
-      <div className="neu-tabs" style={{ marginBottom: 24 }}>
-        <button
-          className={`neu-tab ${activeTab === "send" ? "active" : ""}`}
-          onClick={() => setActiveTab("send")}
-        >
-          إرسال إشعار
-        </button>
-        <button
-          className={`neu-tab ${activeTab === "internal" ? "active" : ""}`}
-          onClick={() => setActiveTab("internal")}
-        >
-          إشعارات الأدمن {unreadCount > 0 && <span className="badge-dot">{unreadCount}</span>}
-        </button>
+        <div className="notif-tabs neu-in">
+          <button
+            className={`notif-tab ${activeTab === "send" ? "active" : ""}`}
+            onClick={() => setActiveTab("send")}
+          >
+            إرسال إشعار
+          </button>
+          <button
+            className={`notif-tab ${activeTab === "internal" ? "active" : ""}`}
+            onClick={() => setActiveTab("internal")}
+          >
+            إشعارات الأدمن
+            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+          </button>
+        </div>
       </div>
 
       {activeTab === "send" && (
-        <div className="neu-card" style={{ padding: 24, maxWidth: 600 }}>
-          <form onSubmit={handleSend}>
-            <div className="form-group">
+        <div className="card neu notif-send-card">
+          <div className="card-header">
+            <div className="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              إرسال إشعار جديد
+            </div>
+          </div>
+
+          <form className="card-body notif-form" onSubmit={handleSend}>
+            <div className="notif-field">
               <label>نوع الإشعار</label>
               <select
                 className="neu-input"
@@ -180,14 +192,19 @@ export default function Notifications() {
             </div>
 
             {type === "wilaya" && (
-              <div className="form-group">
-                <label>اختر الولايات ({selectedWilayas.length} مختارة)</label>
-                <div className="wilaya-multiselect">
+              <div className="notif-field">
+                <label>
+                  اختر الولايات{" "}
+                  {selectedWilayas.length > 0 && (
+                    <span className="notif-count-pill">{selectedWilayas.length}</span>
+                  )}
+                </label>
+                <div className="wilaya-grid neu-in">
                   {WILAYAS.map((w) => (
                     <button
                       type="button"
                       key={w}
-                      className={`wilaya-chip ${selectedWilayas.includes(w) ? "selected" : ""}`}
+                      className={`wilaya-chip ${selectedWilayas.includes(w) ? "active" : ""}`}
                       onClick={() => toggleWilaya(w)}
                     >
                       {w}
@@ -198,7 +215,7 @@ export default function Notifications() {
             )}
 
             {type === "user" && (
-              <div className="form-group">
+              <div className="notif-field">
                 <label>معرّف المستخدم (User ID)</label>
                 <input
                   className="neu-input"
@@ -207,13 +224,13 @@ export default function Notifications() {
                   value={targetUserId}
                   onChange={(e) => setTargetUserId(e.target.value)}
                 />
-                <small style={{ color: "#888" }}>
-                  نصيحة: زيد بحث بالإيميل/الاسم فصفحة المستخدمين وانسخ الـ ID من هناك
-                </small>
+                <span className="notif-hint">
+                  نصيحة: انسخ الـ ID من صفحة المستخدمين
+                </span>
               </div>
             )}
 
-            <div className="form-group">
+            <div className="notif-field">
               <label>العنوان</label>
               <input
                 className="neu-input"
@@ -224,7 +241,7 @@ export default function Notifications() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="notif-field">
               <label>النص</label>
               <textarea
                 className="neu-input"
@@ -235,45 +252,59 @@ export default function Notifications() {
               />
             </div>
 
-            {sendResult && (
-              <div className={`alert ${sendResult.ok ? "alert-success" : "alert-error"}`}>
-                {sendResult.msg}
-              </div>
-            )}
-
-            <button type="submit" className="neu-button primary" disabled={sending}>
-              {sending ? "جاري الإرسال..." : "إرسال الإشعار"}
+            <button type="submit" className="neu-btn-accent notif-send-btn" disabled={sending}>
+              {sending ? <span className="spinner" /> : "إرسال الإشعار"}
             </button>
           </form>
         </div>
       )}
 
       {activeTab === "internal" && (
-        <div className="neu-card" style={{ padding: 24 }}>
-          {loadingInternal ? (
-            <p>جاري التحميل...</p>
-          ) : internalNotifs.length === 0 ? (
-            <p>لا توجد إشعارات</p>
-          ) : (
-            <ul className="notif-list">
-              {internalNotifs.map((n) => (
-                <li
-                  key={n.id}
-                  className={`notif-item ${n.is_read ? "read" : "unread"}`}
-                  onClick={() => !n.is_read && markAsRead(n.id)}
-                >
-                  <div className="notif-item-header">
-                    <strong>{n.title}</strong>
-                    <span className="notif-date">
-                      {new Date(n.created_at).toLocaleString("ar-DZ")}
-                    </span>
-                  </div>
-                  <p>{n.body}</p>
-                  {!n.is_read && <span className="badge-dot small">جديد</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="card neu">
+          <div className="card-header">
+            <div className="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              إشعارات النظام
+            </div>
+          </div>
+
+          <div className="card-body">
+            {loadingInternal ? (
+              <div className="notif-loading">
+                <span className="spinner-dark" />
+              </div>
+            ) : internalNotifs.length === 0 ? (
+              <p className="notif-empty">لا توجد إشعارات</p>
+            ) : (
+              <ul className="notif-list">
+                {internalNotifs.map((n) => (
+                  <li
+                    key={n.id}
+                    className={`notif-item neu-sm ${n.is_read ? "read" : "unread"}`}
+                    onClick={() => !n.is_read && markAsRead(n.id)}
+                  >
+                    <div className="notif-item-top">
+                      <strong>{n.title}</strong>
+                      <span className="notif-item-date">
+                        {new Date(n.created_at).toLocaleString("ar-DZ")}
+                      </span>
+                    </div>
+                    <p>{n.body}</p>
+                    {!n.is_read && <span className="notif-new-dot" />}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
+          {toast.msg}
         </div>
       )}
     </div>
