@@ -46,12 +46,17 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <span className="sidebar-brand-icon">🎬</span>
         <span className="sidebar-brand-text">VidReward DZ</span>
       </div>
 
       <div className="sidebar-profile">
-        <div className="sidebar-avatar">{initials(email)}</div>
+      <div className="sidebar-avatar">
+        <img
+          src="/favicon.png"
+          alt="VidReward"
+          className="sidebar-avatar-logo"
+       />
+     </div>
         <div className="sidebar-name">{email ?? "أدمن"}</div>
         <div className="sidebar-email">Administrator</div>
       </div>
