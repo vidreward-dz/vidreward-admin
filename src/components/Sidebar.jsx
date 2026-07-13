@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../lib/useAuth";
+import { Bell } from "lucide-react";
 
 const NAV = [
   {
