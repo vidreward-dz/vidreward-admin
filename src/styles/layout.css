@@ -44,11 +44,11 @@ body { background: var(--canvas-bg); }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: transparent;
 }
 .sidebar-avatar-logo {
-  width: 100%;
-  height: 100%;
+  width: 130%;
+  height: 130%;
   object-fit: cover;
 }
 .sidebar-name {
