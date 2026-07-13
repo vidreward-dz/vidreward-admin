@@ -10,6 +10,7 @@ import Campaigns from "./pages/Campaigns";
 import Advertisers from "./pages/Advertisers";
 import Notifications from "./pages/Notifications"; 
 import Settings from "./pages/Settings";
+import PromoBanners from "./pages/PromoBanners";
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/advertisers" element={<RequireAuth><Advertisers /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} /> 
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/promo-banners" element={<RequireAuth><PromoBanners /></RequireAuth>} />
           <Route path="*" element={<Login />} /> 
         </Routes>
       </AuthProvider>
