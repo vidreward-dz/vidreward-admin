@@ -1,0 +1,183 @@
+/* ============================================
+   Notifications Page — Additional Styles
+   يُضاف فآخر dashboard.css (أو ملف CSS منفصل مستورد)
+   يتبع نفس نمط Neumorphism dark teal الحالي
+   ============================================ */
+
+/* --- Tabs --- */
+.neu-tabs {
+  display: flex;
+  gap: 12px;
+  background: var(--bg-color, #e8ecf1);
+  padding: 6px;
+  border-radius: 16px;
+  box-shadow: inset 4px 4px 8px rgba(163, 177, 198, 0.4),
+              inset -4px -4px 8px rgba(255, 255, 255, 0.6);
+  width: fit-content;
+}
+
+.neu-tab {
+  border: none;
+  background: transparent;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.neu-tab:hover {
+  color: #0f766e;
+}
+
+.neu-tab.active {
+  background: #ffffff;
+  color: #0f766e;
+  box-shadow: 3px 3px 6px rgba(163, 177, 198, 0.4),
+              -3px -3px 6px rgba(255, 255, 255, 0.7);
+}
+
+/* --- Wilaya multi-select chips --- */
+.wilaya-multiselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--bg-color, #e8ecf1);
+  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.4),
+              inset -3px -3px 6px rgba(255, 255, 255, 0.6);
+}
+
+.wilaya-chip {
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #ffffff;
+  color: #374151;
+  box-shadow: 2px 2px 4px rgba(163, 177, 198, 0.3),
+              -2px -2px 4px rgba(255, 255, 255, 0.7);
+  transition: all 0.15s ease;
+}
+
+.wilaya-chip:hover {
+  transform: translateY(-1px);
+}
+
+.wilaya-chip.selected {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #ffffff;
+  box-shadow: 2px 2px 5px rgba(15, 118, 110, 0.4);
+}
+
+/* --- Internal notifications list --- */
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notif-item {
+  position: relative;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 3px 3px 6px rgba(163, 177, 198, 0.35),
+              -3px -3px 6px rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notif-item.unread {
+  border-inline-start: 4px solid #d4a017; /* ذهبي */
+}
+
+.notif-item.read {
+  opacity: 0.65;
+}
+
+.notif-item:hover {
+  transform: translateY(-1px);
+}
+
+.notif-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.notif-item-header strong {
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.notif-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.notif-item p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+/* --- Badge (unread count) --- */
+.badge-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  margin-inline-start: 6px;
+}
+
+.badge-dot.small {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 16px;
+  background: #d4a017;
+  font-size: 10px;
+  min-width: auto;
+  padding: 2px 8px;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* --- Alerts (نتيجة الإرسال) --- */
+.alert {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  margin: 12px 0;
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.alert-error {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
