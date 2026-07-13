@@ -37,12 +37,19 @@ body { background: var(--canvas-bg); }
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .sidebar-avatar {
-  width: 68px; height: 68px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 900; color: #fff;
-  margin-bottom: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.sidebar-avatar-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .sidebar-name {
   font-size: 12.5px; font-weight: 700; color: #fff;
