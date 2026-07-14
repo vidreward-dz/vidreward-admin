@@ -3,9 +3,9 @@ import AppLayout from "../components/AppLayout";
 import { callFunction, AuthError } from "../lib/supabaseClient";
 import { useAuth } from "../lib/useAuth";
 
-async function requestUploadUrl({ fileName, fileType }) {
+async function requestUploadUrl({ fileName, fileType, kind = "video" }) {
   return callFunction("admin-get-upload-url", {
-    body: { fileName, fileType },
+    body: { fileName, fileType, kind },
   });
 }
 
@@ -275,7 +275,8 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
   const [durationSecs, setDurationSecs] = useState("");
   const [rewardAmount, setRewardAmount] = useState("");
   const [minWatchPct, setMinWatchPct] = useState(80);
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [facebookUrl, setFacebookUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
@@ -297,6 +298,15 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
     }
   }
 
+  function handleThumbnailChange(e) {
+    const f = e.target.files?.[0] ?? null;
+    setThumbnailFile(f);
+    setThumbnailPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return f ? URL.createObjectURL(f) : null;
+    });
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) return onError("رجاءً اختاري ملف الفيديو أولاً");
@@ -309,11 +319,26 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
       const { uploadUrl, publicUrl } = await requestUploadUrl({
         fileName: file.name,
         fileType: file.type || "video/mp4",
+        kind: "video",
       });
 
       setStage("uploading");
       setProgress(0);
       await uploadWithProgress(uploadUrl, file, setProgress);
+
+      // رفع الصورة المصغرة (اختياري) — نفس آلية رفع الفيديو، بس فـ bucket منفصل
+      let thumbnailPublicUrl;
+      if (thumbnailFile) {
+        setStage("uploading-thumb");
+        const { uploadUrl: thumbUploadUrl, publicUrl: thumbPublicUrl } =
+          await requestUploadUrl({
+            fileName: thumbnailFile.name,
+            fileType: thumbnailFile.type || "image/jpeg",
+            kind: "thumbnail",
+          });
+        await uploadWithProgress(thumbUploadUrl, thumbnailFile, () => {});
+        thumbnailPublicUrl = thumbPublicUrl;
+      }
 
       setStage("saving");
       const { video } = await createVideoRecord({
@@ -321,7 +346,7 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         title: title.trim() || file.name,
         description: description.trim() || undefined,
         videoUrl: publicUrl,
-        thumbnailUrl: thumbnailUrl.trim() || undefined,
+        thumbnailUrl: thumbnailPublicUrl,
         durationSecs: Number(durationSecs),
         rewardAmount: Number(rewardAmount),
         minWatchPct: Number(minWatchPct) || 80,
@@ -346,7 +371,8 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
     idle: "رفع الفيديو",
     detecting: "جارٍ قراءة مدة الفيديو...",
     requesting: "تجهيز الرفع...",
-    uploading: `جارٍ الرفع... ${progress}%`,
+    uploading: `جارٍ رفع الفيديو... ${progress}%`,
+    "uploading-thumb": "جارٍ رفع الصورة المصغرة...",
     saving: "جارٍ الحفظ...",
   }[stage];
 
@@ -471,16 +497,30 @@ function UploadModal({ campaigns, onClose, onUploaded, onError, onAuthError }) {
         </div>
 
         <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>
-          رابط الصورة المصغرة (اختياري — لصق رابط فقط)
+          الصورة المصغرة (اختياري)
         </label>
         <input
-          className="neu-input"
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
-          placeholder="https://..."
+          type="file"
+          accept="image/*"
           disabled={busy}
-          style={{ marginBottom: 14 }}
+          onChange={handleThumbnailChange}
+          className="neu-input"
+          style={{ marginBottom: thumbnailPreview ? 10 : 14, padding: 10 }}
         />
+        {thumbnailPreview && (
+          <img
+            src={thumbnailPreview}
+            alt="معاينة الصورة المصغرة"
+            style={{
+              width: "100%",
+              maxHeight: 140,
+              objectFit: "cover",
+              borderRadius: 12,
+              marginBottom: 14,
+              display: "block",
+            }}
+          />
+        )}
 
         <details style={{ marginBottom: 16 }}>
           <summary style={{ fontSize: 12, fontWeight: 700, cursor: "pointer", color: "var(--text-secondary)" }}>
