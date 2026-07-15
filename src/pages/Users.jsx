@@ -19,6 +19,8 @@ export default function Users() {
   const [toast, setToast] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null); // { user, nextActive }
+  const [deleteTarget, setDeleteTarget] = useState(null); // user
+  const [tempBlockTarget, setTempBlockTarget] = useState(null); // user
   const [search, setSearch] = useState("");
 
   const initialFilter = new URLSearchParams(window.location.search).get("filter");
@@ -62,6 +64,37 @@ export default function Users() {
     } finally {
       setBusyId(null);
       setConfirmTarget(null);
+    }
+  }
+
+  async function handleDelete(u) {
+    setBusyId(u.id);
+    try {
+      await callFunction("admin-delete-user", { body: { userId: u.id } });
+      showToast("success", `تم حذف ${u.name} نهائياً`);
+      load();
+    } catch (err) {
+      if (err instanceof AuthError) return signOut();
+      showToast("error", err.message || "فشل الحذف");
+    } finally {
+      setBusyId(null);
+      setDeleteTarget(null);
+    }
+  }
+
+  async function handleTempBlock(u, hours) {
+    setBusyId(u.id);
+    try {
+      await callFunction("admin-temp-block-user", { body: { userId: u.id, hours } });
+      const label = hours === 24 ? "24 ساعة" : hours === 72 ? "3 أيام" : "7 أيام";
+      showToast("success", `تم حظر ${u.name} مؤقتاً لمدة ${label}`);
+      load();
+    } catch (err) {
+      if (err instanceof AuthError) return signOut();
+      showToast("error", err.message || "فشلت العملية");
+    } finally {
+      setBusyId(null);
+      setTempBlockTarget(null);
     }
   }
 
@@ -209,19 +242,46 @@ export default function Users() {
                               color: u.is_active ? "var(--green)" : "var(--red)",
                             }}
                           >
-                            {u.is_active ? "نشط" : "محظور"}
+                            {u.is_active
+                              ? "نشط"
+                              : u.blocked_until && new Date(u.blocked_until) > new Date()
+                              ? "محظور مؤقتاً"
+                              : "محظور"}
                           </span>
+                          {!u.is_active && u.blocked_until && new Date(u.blocked_until) > new Date() && (
+                            <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 4 }}>
+                              حتى {formatDate(u.blocked_until)}
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: "14px 20px", whiteSpace: "nowrap" }}>
                           {u.role !== "admin" && (
-                            <button
-                              className="neu-btn"
-                              disabled={busy}
-                              onClick={() => setConfirmTarget({ user: u, nextActive: !u.is_active })}
-                              style={{ padding: "7px 12px", fontSize: 11, color: u.is_active ? "var(--red)" : "var(--green)" }}
-                            >
-                              {busy ? "..." : u.is_active ? "حظر" : "إلغاء الحظر"}
-                            </button>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <button
+                                className="neu-btn"
+                                disabled={busy}
+                                onClick={() => setConfirmTarget({ user: u, nextActive: !u.is_active })}
+                                style={{ padding: "7px 12px", fontSize: 11, color: u.is_active ? "var(--red)" : "var(--green)" }}
+                              >
+                                {busy ? "..." : u.is_active ? "حظر" : "إلغاء الحظر"}
+                              </button>
+                              <button
+                                className="neu-btn"
+                                disabled={busy}
+                                onClick={() => setTempBlockTarget(u)}
+                                style={{ padding: "7px 12px", fontSize: 11, color: "var(--gold, #b8860b)" }}
+                              >
+                                ⏳ بلوك مؤقت
+                              </button>
+                              <button
+                                className="neu-btn"
+                                disabled={busy}
+                                onClick={() => setDeleteTarget(u)}
+                                style={{ padding: "7px 12px", fontSize: 11, color: "var(--red)" }}
+                              >
+                                🗑️ حذف
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -266,6 +326,76 @@ export default function Users() {
                 style={{ flex: 1 }}
               >
                 تأكيد
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tempBlockTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(20,20,35,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setTempBlockTarget(null)}
+        >
+          <div className="neu" style={{ width: 400, maxWidth: "100%", borderRadius: 24, padding: 26, textAlign: "center" }}>
+            <div style={{ fontSize: 34, marginBottom: 10 }}>⏳</div>
+            <h2 className="display" style={{ fontSize: 17, marginBottom: 10 }}>بلوك مؤقت</h2>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: 22 }}>
+              اختاري مدة حظر <b style={{ color: "var(--text-primary)" }}>{tempBlockTarget.name}</b>. سيُفك الحظر تلقائياً بعد انتهاء المدة.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { hours: 24, label: "24 ساعة" },
+                { hours: 72, label: "3 أيام" },
+                { hours: 168, label: "7 أيام" },
+              ].map((opt) => (
+                <button
+                  key={opt.hours}
+                  className="neu-btn neu-btn-accent"
+                  onClick={() => handleTempBlock(tempBlockTarget, opt.hours)}
+                  style={{ padding: "10px" }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button className="neu-btn" onClick={() => setTempBlockTarget(null)} style={{ padding: "10px" }}>
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(20,20,35,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}
+        >
+          <div className="neu" style={{ width: 400, maxWidth: "100%", borderRadius: 24, padding: 26, textAlign: "center" }}>
+            <div style={{ fontSize: 34, marginBottom: 10 }}>🗑️</div>
+            <h2 className="display" style={{ fontSize: 17, marginBottom: 10, color: "var(--red)" }}>
+              حذف نهائي — لا رجعة فيه
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: 22 }}>
+              سيُحذف حساب <b style={{ color: "var(--text-primary)" }}>{deleteTarget.name}</b> وكل بياناته
+              (المحفظة، المشاهدات، السحوبات، الإحالات) بشكل نهائي. هاذ الإجراء ما يمكنش التراجع عنه.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="neu-btn" onClick={() => setDeleteTarget(null)} style={{ flex: 1 }}>
+                إلغاء
+              </button>
+              <button
+                className="neu-btn"
+                onClick={() => handleDelete(deleteTarget)}
+                style={{ flex: 1, background: "var(--red)", color: "#fff" }}
+              >
+                تأكيد الحذف النهائي
               </button>
             </div>
           </div>
