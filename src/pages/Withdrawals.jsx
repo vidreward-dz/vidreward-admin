@@ -33,6 +33,7 @@ export default function Withdrawals() {
   const [rejectReason, setRejectReason] = useState("");
   const [confirmAction, setConfirmAction] = useState(null); // { type: 'approve'|'paid', withdrawal }
   const [filter, setFilter] = useState("pending"); // pending | approved | all
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   async function load() {
     setLoadError("");
@@ -143,6 +144,13 @@ export default function Withdrawals() {
         ))}
         <button className="neu-btn" onClick={load} style={{ padding: "8px 14px", fontSize: 12, marginRight: "auto" }}>
           تحديث ↻
+        </button>
+        <button
+          className="neu-btn neu-btn-accent"
+          onClick={() => setShowPdfModal(true)}
+          style={{ padding: "8px 14px", fontSize: 12 }}
+        >
+          📄 عرض/تحميل PDF
         </button>
       </div>
 
@@ -330,8 +338,97 @@ export default function Withdrawals() {
         </div>
       )}
 
+      {showPdfModal && (
+        <PendingWithdrawalsPdfModal
+          withdrawals={(withdrawals ?? []).filter(
+            (w) => w.status === "pending" || w.status === "under_review",
+          )}
+          onClose={() => setShowPdfModal(false)}
+        />
+      )}
+
       {toast && <div className={`toast toast-${toast.type}`}>{toast.text}</div>}
     </AppLayout>
+  );
+}
+
+function PendingWithdrawalsPdfModal({ withdrawals, onClose }) {
+  const now = new Date();
+  const totalAmount = withdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(20,20,35,0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 16,
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="pdf-modal-overlay"
+    >
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .pdf-printable, .pdf-printable * { visibility: visible; }
+          .pdf-printable {
+            position: absolute; inset: 0; width: 100%; padding: 24px;
+            background: #fff !important; color: #000 !important;
+          }
+          .pdf-modal-overlay { position: static !important; background: none !important; padding: 0 !important; }
+          .pdf-modal-no-print { display: none !important; }
+        }
+      `}</style>
+      <div
+        className="neu"
+        style={{ width: "100%", maxWidth: 720, maxHeight: "88vh", overflowY: "auto", borderRadius: 20, padding: 22 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="pdf-modal-no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 16 }}>الطلبات الجديدة (قيد الانتظار) — {withdrawals.length}</h3>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="neu-btn neu-btn-accent" onClick={() => window.print()} style={{ padding: "8px 14px", fontSize: 12 }}>
+              تحميل PDF
+            </button>
+            <button className="neu-btn" onClick={onClose} style={{ padding: "8px 12px" }}>✕</button>
+          </div>
+        </div>
+
+        <div className="pdf-printable">
+          <h2 style={{ fontSize: 18, marginBottom: 4, textAlign: "center" }}>VidReward DZ — طلبات السحب الجديدة</h2>
+          <p style={{ fontSize: 11, textAlign: "center", color: "#666", marginBottom: 18 }}>
+            تاريخ الاستخراج: {formatDate(now.toISOString())} — عدد الطلبات: {withdrawals.length} — المجموع: {totalAmount.toLocaleString("ar-DZ")} دج
+          </p>
+
+          {withdrawals.length === 0 ? (
+            <p style={{ textAlign: "center", fontSize: 13, color: "#999", padding: "30px 0" }}>لا توجد طلبات قيد الانتظار حالياً.</p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+              <thead>
+                <tr>
+                  {["#", "المستخدم", "المبلغ", "الطريقة", "رقم الهاتف", "الولاية", "التاريخ"].map((h) => (
+                    <th key={h} style={{ border: "1px solid #ccc", padding: "6px 8px", background: "#f2f2f2", textAlign: "right" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {withdrawals.map((w, i) => (
+                  <tr key={w.id}>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{i + 1}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{w.users?.name ?? "—"}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{w.amount} دج</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{METHOD_LABELS[w.method] ?? w.method}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{w.phone_number}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{w.users?.wilaya ?? "—"}</td>
+                    <td style={{ border: "1px solid #ccc", padding: "6px 8px" }}>{formatDate(w.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
